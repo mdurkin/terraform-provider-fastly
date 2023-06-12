@@ -40,6 +40,12 @@ func resourceUser() *schema.Resource {
 				Description:      "The role of this user. Can be `user` (the default), `billing`, `engineer`, or `superuser`. For detailed information on the abilities granted to each role, see [Fastly's Documentation on User roles](https://docs.fastly.com/en/guides/configuring-user-roles-and-permissions#user-roles-and-what-they-can-do)",
 				ValidateDiagFunc: validateUserRole(),
 			},
+			"limit_services": {
+				Type:             schema.TypeBool,
+				Optional:         true,
+				Default:          "false",
+				Description:      "Indicates that the user has limited access to the customer's services.",
+			},
 		},
 	}
 }
@@ -51,6 +57,7 @@ func resourceUserCreate(_ context.Context, d *schema.ResourceData, meta any) dia
 		Login: gofastly.String(d.Get("login").(string)),
 		Name:  gofastly.String(d.Get("name").(string)),
 		Role:  gofastly.String(d.Get("role").(string)),
+		LimitServices:  gofastly.CBool(d.Get("limit_services").(bool)),		
 	})
 	if err != nil {
 		return diag.FromErr(err)
@@ -75,6 +82,7 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, meta any) diag.
 	d.Set("login", u.Login)
 	d.Set("name", u.Name)
 	d.Set("role", u.Role)
+	d.Set("limit_services", u.LimitServices)
 
 	return nil
 }
@@ -83,11 +91,12 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, meta any) d
 	conn := meta.(*APIClient).conn
 
 	// Update Name and/or Role.
-	if d.HasChanges("name", "role") {
+	if d.HasChanges("name", "role", "limit_services") {
 		_, err := conn.UpdateUser(&gofastly.UpdateUserInput{
 			ID:   d.Id(),
 			Name: gofastly.String(d.Get("name").(string)),
 			Role: gofastly.String(d.Get("role").(string)),
+			LimitServices: gofastly.CBool(d.Get("limit_services").(bool)),
 		})
 		if err != nil {
 			return diag.FromErr(err)
